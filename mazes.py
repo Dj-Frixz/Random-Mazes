@@ -18,43 +18,39 @@ class Maze:
     def grow_tree(self):
         x,y,z = np.unravel_index(np.argmin(self.weights), self.weights.shape)
         x,y,z = x.item(), y.item(), z.item()
-        # added_edges = {(x,y,z)}
-        self.grow_leaf(x,y,z)
-        neighbors = self.find_neighbors(x,y,set())
-        neighbors = self.find_neighbors(x-(z-1),y+z,neighbors)
+        neighbours = self.find_neighbours(x,y,set())
+        self.V.remove((x,y))
+        neighbours = self.grow_leaf(x,y,z,neighbours)
 
         while len(self.V) > 0:
-            list_n = list(neighbors)
-            # weights = self.weights[*zip(*list_n)]
-            x,y,z = list_n[np.argmin(self.weights[*zip(*list_n)])]
-            self.grow_leaf(x,y,z)
-            neighbors.discard((x,y,z))
-            neighbors = self.find_neighbors(x,y,neighbors)
-            neighbors = self.find_neighbors(x-(z-1),y+z,neighbors)
+            N = list(neighbours)
+            x,y,z = N[np.argmin(self.weights[*zip(*N)])]
+            neighbours = self.grow_leaf(x,y,z,neighbours)
         
-        self.weights = np.where(self.weights<1,1,self.weights)-1 # re-code with 0 : wall, 1 : passage
+        # closing every unused edge with a wall
+        self.weights = np.where(self.weights<1,1,self.weights) # 1 for wall, 2 for passage
 
-    
-    def grow_leaf(self,x,y,z):
-        self.V.difference_update({(x,y),(x-(z-1),y+z)})
+    def grow_leaf(self,x,y,z,N):
         self.weights[x,y,z] = 2 # 1 for wall, 2 for passage
 
-    def find_neighbors(self,x,y,N):
-        neighbors = set()
-        if x>0 and (x-1,y) in self.V:
-            neighbors.add((x-1,y,0))
-        if y>0 and (x,y-1) in self.V:
-            neighbors.add((x,y-1,1))
-        if (x+1,y) in self.V:
-            neighbors.add((x,y,0))
-        if (x,y+1) in self.V:
-            neighbors.add((x,y,1))
-        return N.difference({(x-1,y,0),(x,y-1,1),(x,y,0),(x,y,1)}).union(neighbors)
+        if (x,y) not in self.V:
+            x, y = x-(z-1), y+z # the new node
+        
+        self.V.remove((x,y))
+        return self.find_neighbours(x,y,N)
+
+    def find_neighbours(self,x,y,N):
+        local_N = {(x,y,0),(x,y,1)} # local neighbours = edges incident in node (x,y)
+        if x>0:
+            local_N.add((x-1,y,0))
+        if y>0:
+            local_N.add((x,y-1,1))
+        return N.symmetric_difference(local_N)
     
     def generate_str(self):
         string = ' _'*self.m + ' \n|'
-        hh = np.where(self.weights[:,:,0]==0,'_',' ')
-        vv = np.where(self.weights[:,:,1]==0,'|',' ')
+        hh = np.where(self.weights[:,:,0]==1,'_',' ') # 1 for wall, 2 for passage
+        vv = np.where(self.weights[:,:,1]==1,'|',' ') # 1 for wall, 2 for passage
         mat = np.strings.add(hh,vv)
         sep = np.full((self.n,1),'\n|')
         string += ''.join(np.concatenate((mat,sep),1).flatten())
