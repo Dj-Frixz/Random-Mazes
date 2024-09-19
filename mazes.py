@@ -52,19 +52,13 @@ class Maze:
         return N.difference({(x-1,y,0),(x,y-1,1),(x,y,0),(x,y,1)}).union(neighbors)
     
     def generate_str(self):
-        string = ' _'*self.m + ' \n'
+        string = ' _'*self.m + ' \n|'
         hh = np.where(self.weights[:,:,0]==0,'_',' ')
         vv = np.where(self.weights[:,:,1]==0,'|',' ')
         mat = np.strings.add(hh,vv)
-        rows = np.array(['|']*self.n)
-        
-        for i in range(self.m): rows = rows + mat[:,i]
-
-        rows = rows + np.array(['\n']*self.n)
-
-        for i in range(len(rows)): string += rows[i]
-
-        return string
+        sep = np.full((self.n,1),'\n|')
+        string += ''.join(np.concatenate((mat,sep),1).flatten())
+        return string[:-1]
 
     def Kruskal_partial(self):
         minv = np.min(self.vert)
